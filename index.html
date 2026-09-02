@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spider Solitaire — Free, No Download, Full Screen</title>
+<meta name="description" content="Play Spider Solitaire free online. No download, no pop-ups, full screen. 1, 2, or 4 suits, undo, hints, and stats. Runs entirely in your browser.">
+<link rel="canonical" href="https://spider-solitaire.github.io/">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebApplication","name":"Spider Solitaire","url":"https://spider-solitaire.github.io/","applicationCategory":"GameApplication","description":"Free Spider Solitaire in your browser. No download, no pop-ups.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"operatingSystem":"Any"}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7470802264397682" crossorigin="anonymous"></script>
+<script src="track.js" data-ga="G-NMDXLM3Z2J"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px}
+body{font-family:'Inter',-apple-system,sans-serif;background:#14532d;color:#1a1a2e;min-height:100vh;display:flex;flex-direction:column}
+header{background:#052e16;color:#d1fae5;padding:14px 0;text-align:center}
+header h1{font-size:clamp(1.2rem,3.5vw,1.6rem);font-weight:700}
+header p{font-size:.8rem;opacity:.7}
+.topbar{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;background:#065f46;color:#d1fae5;padding:8px;font-size:.85rem}
+.topbar button{background:#10b981;border:none;color:#fff;border-radius:6px;padding:6px 12px;font-weight:600;cursor:pointer;font-size:.8rem}
+.topbar button:hover{background:#059669}
+.topbar select{background:#065f46;color:#d1fae5;border:1px solid #10b981;border-radius:6px;padding:5px 8px;font-size:.8rem}
+.game{max-width:1000px;margin:0 auto;padding:12px;width:100%;flex:1}
+#tableau{display:grid;grid-template-columns:repeat(10,1fr);gap:4px;margin-top:8px}
+.pile{background:#065f46;border:1px solid #10b98155;border-radius:6px;min-height:130px;position:relative;padding:2px;cursor:pointer}
+.pile:empty::after{content:'Drop here';position:absolute;top:50%;left:0;right:0;text-align:center;color:#10b98166;font-size:.7rem;transform:translateY(-50%)}
+.card{position:relative;background:#fff;border:1px solid #999;border-radius:4px;width:100%;aspect-ratio:5/7;font-size:clamp(.6rem,2.2vw,.8rem);font-weight:700;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+.card.down{background:#0f766e;border-color:#134e4a}
+.card .corner{position:absolute;top:2px;left:3px;line-height:1;text-align:center;font-size:.8em}
+.card .center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:1.4em}
+.red{color:#dc2626}.black{color:#1e293b}
+.card.selected{outline:3px solid #fbbf24;outline-offset:-2px}
+.card.hint{outline:3px dashed #a7f3d0;outline-offset:-2px}
+.stackpos{display:block;position:relative;height:100%}
+.cards-stacked .card{margin-top:calc(100% * .55)}
+.win-overlay{position:fixed;inset:0;background:#052e16ee;color:#d1fae5;display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;z-index:50;text-align:center;padding:20px}
+.win-overlay h2{font-size:2rem}
+.win-overlay button{background:#10b981;border:none;color:#fff;border-radius:8px;padding:12px 24px;font-weight:700;font-size:1rem;cursor:pointer}
+.stockbar{text-align:center;margin:6px 0;color:#a7f3d0;font-size:.8rem}
+footer{background:#052e16;color:#6ee7b7;text-align:center;padding:12px;font-size:.75rem;margin-top:auto}
+footer a{color:#d1fae5;text-decoration:none}
+.ad-banner{background:#052e16;border-radius:8px;overflow:hidden;min-height:80px;margin:8px auto;max-width:1000px;display:flex;align-items:center;justify-content:center;color:#6ee7b755;font-size:.7rem;text-transform:uppercase;letter-spacing:1px}
+@media (min-width:900px){.ad-banner{width:100%}}
+@media print{body *{visibility:hidden}}
+</style>
+</head>
+<body>
+<header>
+  <h1>🕷️ Spider Solitaire</h1>
+  <p>Free · No download · No pop-ups · Full screen</p>
+</header>
+
+<div class="topbar">
+  <label>Suits: <select id="suits"><option value="1">1 suit (easy)</option><option value="2">2 suits</option><option value="4" selected>4 suits (hard)</option></select></label>
+  <button onclick="newGame()">🔄 New game</button>
+  <button onclick="undo()">↩️ Undo</button>
+  <button onclick="hint()">💡 Hint</button>
+  <button onclick="deal()">🃏 Deal</button>
+  <span id="status" style="font-weight:600">0/8 done</span>
+  <a href="https://buymeacoffee.com/afrowalkmanstudios" target="_blank" rel="noopener" style="color:#d1fae5;font-size:.8rem">☕</a>
+</div>
+
+<div class="game">
+  <div class="ad-banner">
+    <ins class="adsbygoogle" style="display:inline-block;width:728px;height:90px"
+         data-ad-client="ca-pub-7470802264397682" data-ad-slot="BANNER_SLOT"
+         data-ad-format="horizontal" data-full-width-responsive="true"></ins>
+    <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+  </div>
+  <div class="stockbar" id="stockbar">50 cards in stock · 5 deals left</div>
+  <div id="tableau"></div>
+</div>
+
+<footer>
+  <a href="privacy.html">Privacy</a> · © <span id="yr"></span> Afro Walkman Studios · Spider Solitaire
+</footer>
+
+<div class="win-overlay" id="winOverlay">
+  <h2>🏆 You win!</h2>
+  <p id="winStats"></p>
+  <button onclick="newGame()">Play again</button>
+</div>
+
+<script>
+var RANKS='A23456789TJQK', SUITS=['♠','♥','♦','♣'];
+var piles=[], stock=[], done=0, sel=null, undoStack=[], moves=0, startT=0;
+
+function makeDeck(nsuits){
+  var d=[];
+  for(var s=0;s<nsuits;s++)for(var r=0;r<13;r++)for(var k=0;k<(8/nsuits);k++)d.push({s:s,r:r,up:true});
+  return d;
+}
+function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t}return a}
+function rank(r){return r===0?'A':(r===12?'K':(r===10?'T':(r===11?'J':(r===9?'Q':String(r+1)))))}
+function cardHTML(c,extra){
+  var red=c.s===1||c.s===3;
+  return '<div class="card '+(c.up?'':'down')+(red&&c.up?' red':' black')+'" '+(extra||'')+'>'+(c.up?
+    '<div class="corner">'+rank(c.r)+'<br>'+SUITS[c.s]+'</div><div class="center">'+SUITS[c.s]+'</div>':'')+'</div>';
+}
+function render(){
+  var tb=document.getElementById('tableau');
+  tb.innerHTML='';
+  for(var i=0;i<10;i++){
+    var p=document.createElement('div');
+    p.className='pile';p.id='pile-'+i;
+    var html='';
+    if(piles[i].length){
+      html='<div class="stackpos">';
+      for(var j=0;j<piles[i].length;j++){
+        var c=piles[i][j];
+        var cls='card '+(c.up?'':'down')+(c.s===1||c.s===3?' red':' black');
+        if(c.up){
+          cls+=' clickable';
+          var mov=movableFrom(i,j);
+          if(sel&&sel.i===i&&sel.j===j)cls+=' selected';
+        }
+        html+='<div class="card '+(cls.split('card ')[1])+'" data-i="'+i+'" data-j="'+j+'" style="position:absolute;top:'+(j*24)+'px;left:0;right:0">'+cardFace(c)+'</div>';
+      }
+      html+='</div>';
+    }
+    p.innerHTML=html;
+    tb.appendChild(p);
+  }
+  var dealt=Math.floor(stock.length/10);
+  document.getElementById('stockbar').textContent=stock.length+' cards in stock · '+dealt+' deal'+(dealt===1?'':'s')+' left';
+  document.getElementById('status').textContent=done+'/8 done · '+moves+' moves';
+}
+function cardFace(c){
+  if(!c.up)return '';
+  var red=c.s===1||c.s===3;
+  return '<div class="corner">'+rank(c.r)+'<br>'+SUITS[c.s]+'</div><div class="center">'+SUITS[c.s]+'</div>';
+}
+function movableFrom(i,j){
+  // longest same-suit descending run starting at j (all must be face up)
+  var run=[];
+  for(var k=j;k<piles[i].length;k++){
+    var c=piles[i][k];
+    if(!c.up)break;
+    if(run.length){
+      var prev=run[run.length-1];
+      if(c.s!==prev.s || c.r!==prev.r-1)break;
+    }
+    run.push(c);
+  }
+  return run;
+}
+function validDest(i,j,run){
+  if(piles[i].length===0)return true;
+  var top=piles[i][piles[i].length-1];
+  return top.up && top.r===run[run.length-1].r+1; // dest top one rank above the moved group's top card
+}
+function tryDrop(dst){
+  if(!sel)return;
+  var src=sel.i;
+  var run=movableFrom(src,sel.j);
+  if(src===dst || !run.length || !validDest(dst,sel.j,run)){clearSel();render();return}
+  undoStack.push({type:'move',src:src,dst:dst,count:run.length});
+  for(var k=0;k<run.length;k++)piles[dst].push(piles[src].pop());
+  flipTop(src);
+  moves++;
+  sel=null;
+  checkCompletions();
+  render();
+  window.track&&window.track('spider_move',{suits:document.getElementById('suits').value});
+  if(done===8)win();
+}
+function flipTop(i){
+  if(piles[i].length&&!piles[i][piles[i].length-1].up)piles[i][piles[i].length-1].up=true;
+}
+function checkCompletions(){
+  for(var i=0;i<10;i++){
+    var p=piles[i];
+    while(p.length>=13){
+      var base=p[p.length-13];
+      var ok=true;
+      for(var k=1;k<13;k++){var c=p[p.length-13+k];if(!c.up||c.s!==base.s||c.r!==base.r-k){ok=false;break}}
+      if(!ok)break;
+      var removed=p.splice(p.length-13,13);
+      undoStack.push({type:'complete',pile:i,cards:removed});
+      done++;
+      flipTop(i);
+    }
+  }
+}
+function deal(){
+  if(stock.length===0)return;
+  undoStack.push({type:'deal',saved:stock.slice(),savedPiles:JSON.parse(JSON.stringify(piles))});
+  for(var i=0;i<10&&stock.length;i++){piles[i].push(stock.pop());}
+  render();
+  window.track&&window.track('spider_deal',{});
+}
+function undo(){
+  var u=undoStack.pop();
+  if(!u)return;
+  if(u.type==='move'){
+    for(var k=0;k<u.count;k++)piles[u.src].push(piles[u.dst].pop());
+    moves=Math.max(0,moves-1);
+  }else if(u.type==='complete'){
+    for(var i=0;i<u.cards.length;i++)piles[u.pile].push(u.cards[i]);
+    done=Math.max(0,done-1);
+  }else if(u.type==='deal'){
+    stock=u.saved;
+    piles=u.savedPiles;
+  }
+  render();
+}
+function hint(){
+  for(var i=0;i<10;i++){
+    for(var j=0;j<piles[i].length;j++){
+      var run=movableFrom(i,j);
+      if(!run.length)continue;
+      for(var d=0;d<10;d++){
+        if(d!==i&&validDest(d,i,run)){
+          var el=pileEl(i).querySelector('[data-j="'+j+'"]');
+          if(el){el.classList.add('hint');setTimeout(function(e){e.classList.remove('hint')}.bind(null,el),1400)}
+          return;
+        }
+      }
+    }
+  }
+}
+function win(){
+  var sec=Math.round((Date.now()-startT)/1000);
+  document.getElementById('winStats').textContent=moves+' moves · '+sec+'s · '+document.getElementById('suits').value+' suit';
+  document.getElementById('winOverlay').style.display='flex';
+  var st=JSON.parse(localStorage.getItem('spider_stats')||'{}');
+  st.wins=(st.wins||0)+1;st.best=st.best?Math.min(st.best,moves):moves;
+  localStorage.setItem('spider_stats',JSON.stringify(st));
+  window.track&&window.track('spider_win',{moves:moves,sec:sec});
+}
+function newGame(){
+  var n=parseInt(document.getElementById('suits').value,10);
+  var d=shuffle(makeDeck(n));
+  piles=[];done=0;sel=null;undoStack=[];moves=0;startT=Date.now();
+  for(var i=0;i<10;i++){
+    piles.push([]);
+    var cnt=i<4?6:5;
+    for(var j=0;j<cnt;j++){
+      var c=d.pop();c.up=false;
+      if(j===cnt-1)c.up=true;
+      piles[i].push(c);
+    }
+  }
+  stock=d;
+  document.getElementById('winOverlay').style.display='none';
+  render();
+}
+function clearSel(){sel=null}
+(function(){
+  document.getElementById('tableau').addEventListener('click',function(e){
+    var card=e.target.closest('.card');
+    if(card){
+      var i=+card.dataset.i,j=+card.dataset.j;
+      var c=piles[i][j];
+      if(!c||!c.up)return;
+      var run=movableFrom(i,j);
+      if(!run.length)return;
+      if(sel&&sel.i===i&&sel.j===j){clearSel();render();return}
+      sel={i:i,j:j};
+      render();
+      return;
+    }
+    // clicked pile background -> attempt drop to that pile
+    var p=e.target.closest('.pile');
+    if(p)tryDrop(+p.id.split('-')[1]);
+  });
+})();
+function demo(){
+  // spider piles build DOWNWARD in rank (K at bottom, A at top). Verify move legality + completion.
+  piles=[[],[],[],[],[],[],[],[],[],[]];
+  // pile 0: 10-bottom, 9, 8-top (same suit, consecutive) = valid movable run of 3
+  piles[0]=[{s:0,r:10,up:true},{s:0,r:9,up:true},{s:0,r:8,up:true}];
+  // pile 1: a 9 on top -> run top (8) +1 = 9 => valid destination
+  piles[1]=[{s:2,r:9,up:true}];
+  var run=movableFrom(0,0);
+  console.assert(run.length===3,'run of 3 expected, got '+run.length);
+  console.assert(validDest(1,0,run),'8-run onto 9 valid');
+  console.assert(!validDest(0,0,run),'same-pile move invalid');
+  console.assert(validDest(2,0,run),'run onto empty pile valid');
+  // completion: last 13 cards of a pile = K(12)..A(0) descending = one completed suit
+  piles[2]=[];for(var r=12;r>=0;r--)piles[2].push({s:1,r:r,up:true});
+  done=0;checkCompletions();
+  console.assert(done===1,'one suit completed, got '+done);
+  console.assert(piles[2].length===0,'completed suit removed from pile');
+  // rank()
+  console.assert(rank(0)==='A'&&rank(12)==='K'&&rank(9)==='Q'&&rank(10)==='T','rank map');
+  console.log('spider self-check OK');
+}
+window.addEventListener('load',function(){
+  document.getElementById('yr').textContent=new Date().getFullYear();
+  if(new URLSearchParams(location.search).get('demo'))demo();
+  else newGame();
+});
+</script>
+</body>
+</html>
