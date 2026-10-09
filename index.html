@@ -34,6 +34,7 @@ header p{font-size:.8rem;opacity:.7}
 .topbar select{background:#065f46;color:#d1fae5;border:1px solid #10b981;border-radius:6px;padding:5px 8px;font-size:.8rem}
 .game{max-width:1000px;margin:0 auto;padding:12px;width:100%;flex:1}
 #tableau{display:grid;grid-template-columns:repeat(10,1fr);gap:4px;margin-top:8px}
+#tableau{touch-action:none}
 .pile{background:#065f46;border:1px solid #10b98155;border-radius:6px;min-height:130px;position:relative;padding:2px;cursor:pointer}
 .pile:empty::after{content:'Drop here';position:absolute;top:50%;left:0;right:0;text-align:center;color:#10b98166;font-size:.7rem;transform:translateY(-50%)}
 .card{position:relative;background:#fff;border:1px solid #999;border-radius:4px;width:100%;aspect-ratio:5/7;font-size:clamp(.6rem,2.2vw,.8rem);font-weight:700;box-shadow:0 1px 2px rgba(0,0,0,.3)}
@@ -43,6 +44,8 @@ header p{font-size:.8rem;opacity:.7}
 .red{color:#dc2626}.black{color:#1e293b}
 .card.selected{outline:3px solid #fbbf24;outline-offset:-2px}
 .card.hint{outline:3px dashed #a7f3d0;outline-offset:-2px}
+.pile.drag-target{box-shadow:0 0 0 3px #fbbf24,0 0 14px #fbbf2455}
+.pile.drag-reject{box-shadow:0 0 0 3px #f87171,0 0 14px #f8717155}
 .stackpos{display:block;position:relative;height:100%}
 .cards-stacked .card{margin-top:calc(100% * .55)}
 .win-overlay{position:fixed;inset:0;background:#052e16ee;color:#d1fae5;display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;z-index:50;text-align:center;padding:20px}
@@ -127,6 +130,10 @@ function render(){
       html+='</div>';
     }
     p.innerHTML=html;
+    // size the pile to its cards so the area below the stack is still a drop target
+    var n=piles[i].length;
+    var cardH=Math.round((p.clientWidth||64)*7/5);
+    p.style.minHeight=(n?((n-1)*24+cardH+28):130)+'px';
     tb.appendChild(p);
   }
   var dealt=Math.floor(stock.length/10);
@@ -254,8 +261,60 @@ function newGame(){
   render();
 }
 function clearSel(){sel=null}
+// --- drag support: mouse + touch, hover-highlights valid destination piles ---
+(function(){
+  var tableau=document.getElementById('tableau');
+  var dragging=false, moved=false, cx=0, cy=0, lastDest=-1;
+  function clearTarget(){
+    if(lastDest>=0){var p=document.getElementById('pile-'+lastDest);if(p)p.classList.remove('drag-target','drag-reject');lastDest=-1;}
+  }
+  function pileIndexAt(x,y){
+    var el=document.elementFromPoint(x,y);
+    while(el&&el!==document.body){if(el.classList&&el.classList.contains('pile'))return +el.id.split('-')[1];el=el.parentNode;}
+    return -1;
+  }
+  tableau.addEventListener('pointerdown',function(e){
+    var card=e.target.closest('.card.clickable');
+    if(!card)return;
+    var i=+card.dataset.i,j=+card.dataset.j;
+    if(!movableFrom(i,j).length)return;
+    sel={i:i,j:j};
+    render();
+    dragging=true;moved=false;cx=e.clientX;cy=e.clientY;lastDest=-1;
+    try{tableau.setPointerCapture(e.pointerId);}catch(_){}
+    e.preventDefault();
+  });
+  tableau.addEventListener('pointermove',function(e){
+    if(!dragging)return;
+    if(Math.abs(e.clientX-cx)+Math.abs(e.clientY-cy)>4)moved=true;
+    var d=pileIndexAt(e.clientX,e.clientY);
+    if(d===lastDest)return;
+    clearTarget();
+    if(d>=0){
+      lastDest=d;
+      var p=document.getElementById('pile-'+d);
+      if(p){
+        var good=d!==sel.i&&validDest(d,sel.i,movableFrom(sel.i,sel.j));
+        p.classList.add(good?'drag-target':'drag-reject');
+      }
+    }
+  });
+  function endDrag(e){
+    if(!dragging)return;
+    dragging=false;
+    var d=lastDest;
+    clearTarget();
+    if(moved&&d>=0&&d!==sel.i&&validDest(d,sel.i,movableFrom(sel.i,sel.j)))tryDrop(d);
+    else if(moved){clearSel();render();}
+    if(moved)suppressClickUntil=Date.now()+400;
+  }
+  tableau.addEventListener('pointerup',endDrag);
+  tableau.addEventListener('pointercancel',endDrag);
+})();
+var suppressClickUntil=0;
 (function(){
   document.getElementById('tableau').addEventListener('click',function(e){
+    if(Date.now()<suppressClickUntil){suppressClickUntil=0;return;}
     var card=e.target.closest('.card');
     if(card){
       var i=+card.dataset.i,j=+card.dataset.j;
@@ -268,7 +327,6 @@ function clearSel(){sel=null}
       render();
       return;
     }
-    // clicked pile background -> attempt drop to that pile
     var p=e.target.closest('.pile');
     if(p)tryDrop(+p.id.split('-')[1]);
   });
