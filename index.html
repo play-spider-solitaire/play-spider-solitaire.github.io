@@ -131,11 +131,14 @@ function render(){
       html+='</div>';
     }
     p.innerHTML=html;
-    // size the pile to its cards so the area below the stack is still a drop target
-    var n=piles[i].length;
-    var cardH=Math.round((p.clientWidth||64)*7/5);
-    p.style.minHeight=(n?((n-1)*24+cardH+28):130)+'px';
     tb.appendChild(p);
+    // size the pile AFTER attaching so card height is real; keeps the area below the stack a drop target
+    var n=piles[i].length;
+    if(n){
+      var lastCard=p.querySelector('.card:last-of-type');
+      var cardH=lastCard?lastCard.offsetHeight:92;
+      p.style.minHeight=((n-1)*24+cardH+28)+'px';
+    }
   }
   var dealt=Math.floor(stock.length/10);
   document.getElementById('stockbar').textContent=stock.length+' cards in stock · '+dealt+' deal'+(dealt===1?'':'s')+' left';
