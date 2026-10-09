@@ -219,7 +219,7 @@ function hint(){
       if(!run.length)continue;
       for(var d=0;d<10;d++){
         if(d!==i&&validDest(d,i,run)){
-          var el=pileEl(i).querySelector('[data-j="'+j+'"]');
+          var el=document.getElementById('pile-'+i).querySelector('[data-j="'+j+'"]');
           if(el){el.classList.add('hint');setTimeout(function(e){e.classList.remove('hint')}.bind(null,el),1400)}
           return;
         }
