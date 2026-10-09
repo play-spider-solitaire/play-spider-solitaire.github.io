@@ -64,7 +64,7 @@ footer a{color:#d1fae5;text-decoration:none}
 </header>
 
 <div class="topbar">
-  <span style="font-size:.8rem;color:#a7f3d0"><strong>How to play:</strong> pick your level → <button onclick="newGame()" style="display:inline;padding:2px 8px;font-size:.75rem">New game</button> — then click a card and drop it on another pile (drag works too).</span>
+  <span style="font-size:.8rem;color:#a7f3d0"><strong>How to play:</strong> pick your level, press New game — then click a card and drop it on another pile (drag works too).</span>
   <label>Suits: <select id="suits"><option value="1">1 suit (easy)</option><option value="2">2 suits</option><option value="4" selected>4 suits (hard)</option></select></label>
   <button onclick="newGame()">🔄 New game</button>
   <button onclick="undo()">↩️ Undo</button>
@@ -268,7 +268,7 @@ function clearSel(){sel=null}
 // --- drag support: mouse + touch, hover-highlights valid destination piles ---
 (function(){
   var tableau=document.getElementById('tableau');
-  var dragging=false, moved=false, cx=0, cy=0, lastDest=-1;
+  var armed=false, dragging=false, moved=false, cx=0, cy=0, lastDest=-1, ghost=null;
   function clearTarget(){
     if(lastDest>=0){var p=document.getElementById('pile-'+lastDest);if(p)p.classList.remove('drag-target','drag-reject');lastDest=-1;}
   }
@@ -277,20 +277,46 @@ function clearSel(){sel=null}
     while(el&&el!==document.body){if(el.classList&&el.classList.contains('pile'))return +el.id.split('-')[1];el=el.parentNode;}
     return -1;
   }
+  function makeGhost(i,j){
+    ghost=document.createElement('div');
+    ghost.style.cssText='position:fixed;z-index:999;pointer-events:none;opacity:.85;width:64px;';
+    var srcPile=document.getElementById('pile-'+i);
+    var cardEls=srcPile.querySelectorAll('.card');
+    for(var k=j;k<cardEls.length;k++){
+      var clone=cardEls[k].cloneNode(true);
+      clone.style.position='static';
+      clone.style.width='';
+      clone.classList.remove('selected');
+      ghost.appendChild(clone);
+    }
+    document.body.appendChild(ghost);
+  }
   tableau.addEventListener('pointerdown',function(e){
     var card=e.target.closest('.card.clickable');
     if(!card)return;
     var i=+card.dataset.i,j=+card.dataset.j;
     if(!movableFrom(i,j).length)return;
-    sel={i:i,j:j};
-    render();
-    dragging=true;moved=false;cx=e.clientX;cy=e.clientY;lastDest=-1;
+    armed=true;dragging=false;moved=false;cx=e.clientX;cy=e.clientY;
+    lastDest=-1;
     try{tableau.setPointerCapture(e.pointerId);}catch(_){}
-    e.preventDefault();
   });
   tableau.addEventListener('pointermove',function(e){
-    if(!dragging)return;
-    if(Math.abs(e.clientX-cx)+Math.abs(e.clientY-cy)>4)moved=true;
+    if(!armed&&!dragging)return;
+    if(!dragging){
+      if(Math.abs(e.clientX-cx)+Math.abs(e.clientY-cy)<=4)return;
+      // real movement -> start drag with the card under the pointer
+      var card=document.elementFromPoint(cx,cy);
+      var c=card&&card.closest?card.closest('.card'):null;
+      if(!c)return;
+      var i=+c.dataset.i,j=+c.dataset.j;
+      if(!movableFrom(i,j).length){armed=false;return;}
+      sel={i:i,j:j};
+      render();
+      makeGhost(i,j);
+      dragging=true;moved=true;
+      e.preventDefault(); // only now: prevents text-select/scroll while dragging
+    }
+    if(ghost){ghost.style.left=(e.clientX-30)+'px';ghost.style.top=(e.clientY-20)+'px';}
     var d=pileIndexAt(e.clientX,e.clientY);
     if(d===lastDest)return;
     clearTarget();
@@ -304,13 +330,19 @@ function clearSel(){sel=null}
     }
   });
   function endDrag(e){
-    if(!dragging)return;
-    dragging=false;
-    var d=lastDest;
-    clearTarget();
-    if(moved&&d>=0&&d!==sel.i&&validDest(d,sel.i,movableFrom(sel.i,sel.j)))tryDrop(d);
-    else if(moved){clearSel();render();}
-    if(moved)suppressClickUntil=Date.now()+400;
+    if(ghost){ghost.remove();ghost=null;}
+    if(!dragging&&!armed){return;}
+    var wasDrag=dragging;
+    dragging=false;armed=false;
+    if(wasDrag){
+      var d=lastDest;
+      clearTarget();
+      if(d>=0&&d!==sel.i&&validDest(d,sel.i,movableFrom(sel.i,sel.j)))tryDrop(d);
+      else clearSel();
+      render();
+      suppressClickUntil=Date.now()+400;
+    }
+    // plain click (no movement): do nothing; the click handler selects
   }
   tableau.addEventListener('pointerup',endDrag);
   tableau.addEventListener('pointercancel',endDrag);
