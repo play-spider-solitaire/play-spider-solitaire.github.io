@@ -34,7 +34,7 @@ header p{font-size:.8rem;opacity:.7}
 .topbar select{background:#065f46;color:#d1fae5;border:1px solid #10b981;border-radius:6px;padding:5px 8px;font-size:.8rem}
 .game{max-width:1000px;margin:0 auto;padding:12px;width:100%;flex:1}
 #tableau{display:grid;grid-template-columns:repeat(10,1fr);gap:4px;margin-top:8px}
-#tableau{touch-action:none}
+#tableau{touch-action:none;-webkit-user-select:none;user-select:none}
 .pile{background:#065f46;border:1px solid #10b98155;border-radius:6px;min-height:130px;position:relative;padding:2px;cursor:pointer}
 .pile:empty::after{content:'Drop here';position:absolute;top:50%;left:0;right:0;text-align:center;color:#10b98166;font-size:.7rem;transform:translateY(-50%)}
 .card{position:relative;background:#fff;border:1px solid #999;border-radius:4px;width:100%;aspect-ratio:5/7;font-size:clamp(.6rem,2.2vw,.8rem);font-weight:700;box-shadow:0 1px 2px rgba(0,0,0,.3)}
@@ -166,7 +166,7 @@ function movableFrom(i,j){
 function validDest(i,j,run){
   if(piles[i].length===0)return true;
   var top=piles[i][piles[i].length-1];
-  return top.up && top.r===run[run.length-1].r+1; // dest top one rank above the moved group's top card
+  return top.up && top.r===run[0].r+1; // dest top one rank above the run's HIGHEST card (dealt-first end)
 }
 function tryDrop(dst){
   if(!sel)return;
@@ -174,7 +174,9 @@ function tryDrop(dst){
   var run=movableFrom(src,sel.j);
   if(src===dst || !run.length || !validDest(dst,sel.j,run)){clearSel();render();return}
   undoStack.push({type:'move',src:src,dst:dst,count:run.length});
-  for(var k=0;k<run.length;k++)piles[dst].push(piles[src].pop());
+  // splice in-place keeps the run in original order (K..A), so blocks remain movable
+  var moved=piles[src].splice(sel.j,run.length);
+  for(var k=0;k<moved.length;k++)piles[dst].push(moved[k]);
   flipTop(src);
   moves++;
   sel=null;
@@ -212,7 +214,8 @@ function undo(){
   var u=undoStack.pop();
   if(!u)return;
   if(u.type==='move'){
-    for(var k=0;k<u.count;k++)piles[u.src].push(piles[u.dst].pop());
+    var back=piles[u.dst].splice(piles[u.dst].length-u.count,u.count);
+    for(var k=0;k<back.length;k++)piles[u.src].push(back[k]);
     moves=Math.max(0,moves-1);
   }else if(u.type==='complete'){
     for(var i=0;i<u.cards.length;i++)piles[u.pile].push(u.cards[i]);
@@ -298,7 +301,7 @@ function clearSel(){sel=null}
     if(!movableFrom(i,j).length)return;
     armed=true;dragging=false;moved=false;cx=e.clientX;cy=e.clientY;
     lastDest=-1;
-    try{tableau.setPointerCapture(e.pointerId);}catch(_){}
+    // NO capture here: it would retarget the click event and break click-select
   });
   tableau.addEventListener('pointermove',function(e){
     if(!armed&&!dragging)return;
@@ -314,6 +317,7 @@ function clearSel(){sel=null}
       render();
       makeGhost(i,j);
       dragging=true;moved=true;
+      try{tableau.setPointerCapture(e.pointerId);}catch(_){}
       e.preventDefault(); // only now: prevents text-select/scroll while dragging
     }
     if(ghost){ghost.style.left=(e.clientX-30)+'px';ghost.style.top=(e.clientY-20)+'px';}
@@ -372,18 +376,25 @@ function demo(){
   piles=[[],[],[],[],[],[],[],[],[],[]];
   // pile 0: 10-bottom, 9, 8-top (same suit, consecutive) = valid movable run of 3
   piles[0]=[{s:0,r:10,up:true},{s:0,r:9,up:true},{s:0,r:8,up:true}];
-  // pile 1: a 9 on top -> run top (8) +1 = 9 => valid destination
-  piles[1]=[{s:2,r:9,up:true}];
+  // pile 1: a J(11) on top -> run's HIGHEST card (10) +1 = 11 => valid destination
+  piles[1]=[{s:2,r:11,up:true}];
   var run=movableFrom(0,0);
   console.assert(run.length===3,'run of 3 expected, got '+run.length);
-  console.assert(validDest(1,0,run),'8-run onto 9 valid');
+  console.assert(validDest(1,0,run),'10-run onto J valid');
   console.assert(!validDest(0,0,run),'same-pile move invalid');
   console.assert(validDest(2,0,run),'run onto empty pile valid');
+  // user case: [9,8] onto T(10) IS legal (9 sits on 10)
+  piles[2]=[{s:0,r:9,up:true},{s:0,r:8,up:true}];
+  piles[3]=[{s:1,r:10,up:true}];
+  console.assert(validDest(3,0,movableFrom(2,0)),'9-8 run onto T legal');
+  // splice move keeps run order (K..A), so blocks stay movable
+  sel={i:2,j:0};tryDrop(3);
+  console.assert(piles[3].length===3&&piles[3][2].r===8,'run moved as [10,9,8] block, order intact');
   // completion: last 13 cards of a pile = K(12)..A(0) descending = one completed suit
-  piles[2]=[];for(var r=12;r>=0;r--)piles[2].push({s:1,r:r,up:true});
+  piles[0]=[];for(var r=12;r>=0;r--)piles[0].push({s:1,r:r,up:true});
   done=0;checkCompletions();
   console.assert(done===1,'one suit completed, got '+done);
-  console.assert(piles[2].length===0,'completed suit removed from pile');
+  console.assert(piles[0].length===0,'completed suit removed from pile');
   // rank()
   console.assert(rank(0)==='A'&&rank(12)==='K'&&rank(9)==='Q'&&rank(10)==='T','rank map');
   console.log('spider self-check OK');
